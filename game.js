@@ -9,7 +9,9 @@ class Vector {
     if (!(vector instanceof(Vector))) {
       throw new Error('Vector.plus: Прибавляемый вектор должен быть объектом Vector');
     }
+    // здесь нужно создать объект Vector сразу с правильными x и y
     const result = new Vector;
+    // мутировать объекты Vector (явно менять x и y) не нужно это может привести к ошибкам
     result.x = this.x + vector.x;
     result.y = this.y + vector.y;
     return result;
@@ -18,6 +20,7 @@ class Vector {
     if (typeof(num) !== 'number') {
       throw new Error('Vector.times: Множитель должен быть числом');
     }
+    // здесь нужно создать объект Vector сразу с правильными x и y
     const result = new Vector;
     result.x = this.x * num;
     result.y = this.y * num;
@@ -86,14 +89,18 @@ class Level {
     if (!(obj instanceof(Actor)) || obj === undefined) {
       throw new Error('Level.actorAt: аргумент должен быть объектом Actor')
     }
+    // это лучше проверить в конструкторе (если this.actors будет равно undefined то работать ничего не будет)
     if (this.actors === undefined) {
       return undefined;
     }
+
+    // для поиска объекта в массиве есть специальный метод
     for (const actor of this.actors) {
       if (actor.isIntersect(obj)) {
         return actor;
       }
     }
+    // эта строка не нужна, функция и так возвращает undefined, если не указано другое
     return undefined;
   }
   obstacleAt(destination, size) {
@@ -107,8 +114,12 @@ class Level {
     if (actor.bottom > this.height) {
       return 'lava';
     }
+
+    // округлянные значения лучше сохранить в переменных, чтобы не округлять на каждой итерации
     for (let col = Math.floor(actor.top); col < Math.ceil(actor.bottom); col++) {
       for (let row = Math.floor(actor.left); row < Math.ceil(actor.right); row++) {
+        // здесь достаточно проверить if (this.grid[col][row])
+        // и this.grid[col][row] лучше записать в переменную, чтобы 2 раза не писать
         if (this.grid[col][row] !== undefined) {
           return this.grid[col][row];
         }
@@ -117,9 +128,11 @@ class Level {
     return undefined;
   }
   removeActor(actor) {
+    // здесь ошибка, удалить нужно именно переданный объект, а не объект с такими же атрибутами
     this.actors = this.actors.filter(item => item.pos !== actor.pos || item.size !== actor.size || item.speed !== actor.speed);
   }
   noMoreActors(type) {
+    // здесь лучше использовать метод some
     if (!(this.actors.find(actor => actor.type === type))) {
       return true;
     }
@@ -143,6 +156,7 @@ class LevelParser {
     this.dictionary = dictionary;
   }
   actorFromSymbol(symbol) {
+    // если убрать все провеверки и условия ничего не изменится
     if (symbol === undefined) {
       return undefined;
     }
@@ -151,13 +165,16 @@ class LevelParser {
   obstacleFromSymbol(symbol) {
     if (symbol === 'x') {
       return 'wall';
+      // else тут можно убрать, т.к. в if return
     } else if (symbol === '!') {
       return 'lava';
     } else {
+      // лишняя строчка
       return undefined;
     }
   }
   createGrid(plan) {
+    // здесь можно упростить с помощью двух вызовов map
     const result = [];
     for (const row of plan) {
       const newRow = [];
@@ -170,9 +187,12 @@ class LevelParser {
   }
   createActors(plan) {
     const result = [];
+    // лучше добвить значение по-умолчанию для dictionary в конструкторе
+    // и проверить там же, что он заполнен
     if (this.dictionary) {
       plan.forEach((row, y) => {
         row.split('').forEach((cell, x) => {
+          // дублирование логики actorFromSymbol
           if (typeof this.dictionary[cell] === 'function') {
             const pos = new Vector(x, y);
             const actor = new this.dictionary[cell](pos);
@@ -201,6 +221,7 @@ class Fireball extends Actor {
     return this.pos.plus(this.speed.times(t));
   }
   handleObstacle() {
+    // здесь нужно исплоьзовать метод класса Vector
     this.speed.x = -this.speed.x;
     this.speed.y = -this.speed.y;
   }
