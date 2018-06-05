@@ -9,6 +9,8 @@ class Vector {
     if (!(vector instanceof(Vector))) {
       throw new Error('Vector.plus: Прибавляемый вектор должен быть объектом Vector');
     }
+
+    // форматирование, не используйте символы табуляции в коде
       const addX = this.x + vector.x;
       const addY = this.y + vector.y;
     return new Vector(addX, addY);
@@ -17,6 +19,8 @@ class Vector {
     if (typeof(num) !== 'number') {
       throw new Error('Vector.times: Множитель должен быть числом');
     }
+    // неудачные названия переменных, накакого сложения тут нет
+    // больше подошло бы newX и newY
     const addX = this.x * num;
     const addY = this.y * num;
     return new Vector(addX, addY);
@@ -24,6 +28,8 @@ class Vector {
 }
 
 class Actor {
+  // не опускайте аргументы коструктора Vector
+  // если кто-то изменит значения по-умолчанию ваш код сломается
   constructor(pos = new Vector(), size = new Vector(1,1), speed = new Vector()) {
     if (!(pos instanceof(Vector)) || !(size instanceof(Vector)) || !(speed instanceof(Vector))) {
       throw new Error('Actor.constructor: все аргументы должны быть объектами Vector');
@@ -58,6 +64,8 @@ class Actor {
     if (actor === this) {
       return false;
     }
+    // отрицание можно внести в скобки, если заменить || на &&,
+    // <= на > и >= на < (противоположные операции)
     return !(this.right <= actor.left ||
               this.left >= actor.right ||
               this.bottom <= actor.top ||
@@ -67,15 +75,18 @@ class Actor {
 
 class Level {
   constructor(grid = [], actors = []) {
+    // здесь лучше создать копии массивов, чтобы поля объекта нельзя было изменить извне
     this.grid = grid;
     this.actors = actors;
     this.height = grid.length;
+    // тренурную операцию сравнения можно убрать, елси добавить 0 в аргументы Math.max
     this.width = this.height > 0 ? Math.max(...grid.map(el => el.length)) : 0;
     this.status = null;
     this.finishDelay = 1;
     this.player = this.actors.find(actor => actor.type === 'player');
   }
   isFinished() {
+    // скобки можно убрать
     return (this.status !== null && this.finishDelay < 0);
   }
 
@@ -91,11 +102,15 @@ class Level {
       throw new Error('Level.obstacleAt: аргументы должны быть объектами Vector')
     }
 
+    // форматирование
       const borderLeft = Math.floor(destination.x);
       const borderRight = Math.ceil(destination.x + size.x);
       const borderTop = Math.floor(destination.y);
       const borderBottom = Math.ceil(destination.y + size.y);
 
+    // новый объекта можно не создавать,
+    // тут он используется только для того,
+    // чтобы прибавлять размер к координатам
     let actor = new Actor(destination, size);
     if (actor.top < 0 || actor.left < 0 || actor.right > this.width) {
       return 'wall';
@@ -105,6 +120,8 @@ class Level {
     }
     for (let col = borderTop; col < borderBottom; col++) {
       for (let row = borderLeft; row < borderRight; row++) {
+        // непонятно что значит gridLev
+        // здесь лучше бы подошло cell
         const gridLev = this.grid[col][row];
         if (gridLev) {
           return gridLev;
@@ -113,6 +130,8 @@ class Level {
     }
   }
   removeActor(actor) {
+    // если объект не будет найден,
+    // то код отработает некорректно
     const actorIndex = this.actors.indexOf(actor);
     this.actors.splice(actorIndex, 1);
   }
@@ -124,6 +143,8 @@ class Level {
         return;
     }
     if (['lava', 'fireball'].some((el) => el === type)) {
+      // тут лучше написать в 2 строчки,
+      // т.к. функция не возвращает никакого значение
         return this.status = 'lost';
     }
     if (type === 'coin' && actor.type === 'coin') {
@@ -137,6 +158,7 @@ class Level {
 
 class LevelParser {
   constructor(dictionary = {}) {
+    // можно = { ...dictionary }
     this.dictionary = Object.assign({}, dictionary);
   }
   actorFromSymbol(symbol) {
@@ -158,6 +180,7 @@ class LevelParser {
     if (this.dictionary) {
       plan.forEach((row, y) => {
         row.split('').forEach((cell, x) => {
+          // this.dictionary[cell] лучше записать в переменную
           if (typeof this.dictionary[cell] === 'function') {
             const pos = new Vector(x, y);
             const actor = new this.dictionary[cell](pos);
@@ -188,7 +211,9 @@ class Fireball extends Actor {
   handleObstacle() {
     this.speed = this.speed.times(-1);
   }
+  // лучше называть переменные значащими именами
   act(t, lvl) {
+    // значение переменной присваивается 1 раз - лучше использовать const
     let nextPosition = this.getNextPosition(t);
     if (!lvl.obstacleAt(nextPosition, this.size)) {
       this.pos = nextPosition;
@@ -213,6 +238,7 @@ class VerticalFireball extends Fireball{
 class FireRain extends Fireball{
   constructor(pos) {
     super(pos, new Vector(0, 3));
+    // init больше похоже на метод, лучше было бы, например, startPos
     this.init = pos;
   }
   handleObstacle() {
