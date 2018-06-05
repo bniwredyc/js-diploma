@@ -9,22 +9,17 @@ class Vector {
     if (!(vector instanceof(Vector))) {
       throw new Error('Vector.plus: Прибавляемый вектор должен быть объектом Vector');
     }
-    // здесь нужно создать объект Vector сразу с правильными x и y
-    const result = new Vector;
-    // мутировать объекты Vector (явно менять x и y) не нужно это может привести к ошибкам
-    result.x = this.x + vector.x;
-    result.y = this.y + vector.y;
-    return result;
+      const addX = this.x + vector.x;
+      const addY = this.y + vector.y;
+    return new Vector(addX, addY);
   }
   times(num) {
     if (typeof(num) !== 'number') {
       throw new Error('Vector.times: Множитель должен быть числом');
     }
-    // здесь нужно создать объект Vector сразу с правильными x и y
-    const result = new Vector;
-    result.x = this.x * num;
-    result.y = this.y * num;
-    return result;
+    const addX = this.x * num;
+    const addY = this.y * num;
+    return new Vector(addX, addY);
   }
 }
 
@@ -53,9 +48,9 @@ class Actor {
   get type() {
     return 'actor';
   }
-  
+
   act() {}
-  
+
   isIntersect(actor) {
     if (!(actor instanceof(Actor)) || actor === undefined) {
       throw new Error('Actor.isIntersect: аргумент должен быть объектом Actor')
@@ -83,30 +78,24 @@ class Level {
   isFinished() {
     return (this.status !== null && this.finishDelay < 0);
   }
-  
-  
+
+
   actorAt(obj) {
     if (!(obj instanceof(Actor)) || obj === undefined) {
       throw new Error('Level.actorAt: аргумент должен быть объектом Actor')
     }
-    // это лучше проверить в конструкторе (если this.actors будет равно undefined то работать ничего не будет)
-    if (this.actors === undefined) {
-      return undefined;
-    }
-
-    // для поиска объекта в массиве есть специальный метод
-    for (const actor of this.actors) {
-      if (actor.isIntersect(obj)) {
-        return actor;
-      }
-    }
-    // эта строка не нужна, функция и так возвращает undefined, если не указано другое
-    return undefined;
+      return this.actors.find(actorEl => actorEl.isIntersect(obj));
   }
   obstacleAt(destination, size) {
     if (!(destination instanceof(Vector)) || !(size instanceof(Vector))) {
       throw new Error('Level.obstacleAt: аргументы должны быть объектами Vector')
     }
+
+      const borderLeft = Math.floor(destination.x);
+      const borderRight = Math.ceil(destination.x + size.x);
+      const borderTop = Math.floor(destination.y);
+      const borderBottom = Math.ceil(destination.y + size.y);
+
     let actor = new Actor(destination, size);
     if (actor.top < 0 || actor.left < 0 || actor.right > this.width) {
       return 'wall';
@@ -114,85 +103,61 @@ class Level {
     if (actor.bottom > this.height) {
       return 'lava';
     }
-
-    // округлянные значения лучше сохранить в переменных, чтобы не округлять на каждой итерации
-    for (let col = Math.floor(actor.top); col < Math.ceil(actor.bottom); col++) {
-      for (let row = Math.floor(actor.left); row < Math.ceil(actor.right); row++) {
-        // здесь достаточно проверить if (this.grid[col][row])
-        // и this.grid[col][row] лучше записать в переменную, чтобы 2 раза не писать
-        if (this.grid[col][row] !== undefined) {
-          return this.grid[col][row];
+    for (let col = borderTop; col < borderBottom; col++) {
+      for (let row = borderLeft; row < borderRight; row++) {
+        const gridLev = this.grid[col][row];
+        if (gridLev) {
+          return gridLev;
         }
       }
     }
-    return undefined;
   }
   removeActor(actor) {
-    // здесь ошибка, удалить нужно именно переданный объект, а не объект с такими же атрибутами
-    this.actors = this.actors.filter(item => item.pos !== actor.pos || item.size !== actor.size || item.speed !== actor.speed);
+    const actorIndex = this.actors.indexOf(actor);
+    this.actors.splice(actorIndex, 1);
   }
   noMoreActors(type) {
-    // здесь лучше использовать метод some
-    if (!(this.actors.find(actor => actor.type === type))) {
-      return true;
-    }
-    return false;
+    return !this.actors.some((actor) => actor.type === type);
   }
   playerTouched(type, actor) {
-    if (type === 'lava' || type === 'fireball') {
-      this.status = 'lost';
+    if (this.status !== null) {
+        return;
+    }
+    if (['lava', 'fireball'].some((el) => el === type)) {
+        return this.status = 'lost';
     }
     if (type === 'coin' && actor.type === 'coin') {
       this.removeActor(actor);
-      if(this.noMoreActors('coin')) {
-        this.status = 'won';
+      if (this.noMoreActors('coin')) {
+          return this.status = 'won'
       }
     }
   }
 }
 
 class LevelParser {
-  constructor(dictionary) {
-    this.dictionary = dictionary;
+  constructor(dictionary = {}) {
+    this.dictionary = Object.assign({}, dictionary);
   }
   actorFromSymbol(symbol) {
-    // если убрать все провеверки и условия ничего не изменится
-    if (symbol === undefined) {
-      return undefined;
-    }
-    return this.dictionary[symbol] ? this.dictionary[symbol] : undefined;
+    return this.dictionary[symbol];
   }
   obstacleFromSymbol(symbol) {
     if (symbol === 'x') {
       return 'wall';
-      // else тут можно убрать, т.к. в if return
-    } else if (symbol === '!') {
+    }
+    if (symbol === '!') {
       return 'lava';
-    } else {
-      // лишняя строчка
-      return undefined;
     }
   }
   createGrid(plan) {
-    // здесь можно упростить с помощью двух вызовов map
-    const result = [];
-    for (const row of plan) {
-      const newRow = [];
-      for (const cell of row) {
-        newRow.push(this.obstacleFromSymbol(cell));
-      }
-      result.push(newRow);
-    }
-    return result;
+    return plan.map(line => line.split('')).map(line => line.map(line => this.obstacleFromSymbol(line)));
   }
   createActors(plan) {
     const result = [];
-    // лучше добвить значение по-умолчанию для dictionary в конструкторе
-    // и проверить там же, что он заполнен
     if (this.dictionary) {
       plan.forEach((row, y) => {
         row.split('').forEach((cell, x) => {
-          // дублирование логики actorFromSymbol
           if (typeof this.dictionary[cell] === 'function') {
             const pos = new Vector(x, y);
             const actor = new this.dictionary[cell](pos);
@@ -211,7 +176,7 @@ class LevelParser {
 }
 
 class Fireball extends Actor {
-  constructor(pos = new Vector(), speed = new Vector()) {
+  constructor(pos = new Vector(0,0), speed = new Vector(0,0)) {
     super(pos, new Vector(1,1), speed);
   }
   get type() {
@@ -221,9 +186,7 @@ class Fireball extends Actor {
     return this.pos.plus(this.speed.times(t));
   }
   handleObstacle() {
-    // здесь нужно исплоьзовать метод класса Vector
-    this.speed.x = -this.speed.x;
-    this.speed.y = -this.speed.y;
+    this.speed = this.speed.times(-1);
   }
   act(t, lvl) {
     let nextPosition = this.getNextPosition(t);
